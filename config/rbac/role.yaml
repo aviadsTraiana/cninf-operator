@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - cninf.aviad.okro.com
+  resources:
+  - objstores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cninf.aviad.okro.com
+  resources:
+  - objstores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - cninf.aviad.okro.com
+  resources:
+  - objstores/status
+  verbs:
+  - get
+  - patch
+  - update
