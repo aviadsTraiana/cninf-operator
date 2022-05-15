@@ -1,0 +1,6 @@
+domain: aviad.okro.com
+layout:
+- go.kubebuilder.io/v3
+projectName: cninf
+repo: github.com/aviadsTraiana/cninf-operator
+version: "3"
