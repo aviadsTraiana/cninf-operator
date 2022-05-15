@@ -36,8 +36,12 @@ spec:
             description: ObjStoreSpec defines the desired state of ObjStore
             properties:
               locked:
+                description: Locked prevents deletion of binary objects from the ObjStore
                 type: boolean
               name:
+                description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                  Important: Run "make" to regenerate code after modifying this file
+                  Name is the name of the ObjStore we want to create'
                 type: string
             required:
             - locked
