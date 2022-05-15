@@ -27,9 +27,10 @@ import (
 type ObjStoreSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	Name   string `json:"name"`
-	Locked bool   `json:"locked"`
+	//Name is the name of the ObjStore we want to create
+	Name string `json:"name"`
+	// Locked prevents deletion of binary objects from the ObjStore
+	Locked bool `json:"locked"`
 }
 
 // ObjStoreStatus defines the observed state of ObjStore
