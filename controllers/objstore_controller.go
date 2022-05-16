@@ -47,9 +47,21 @@ type ObjStoreReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.2/pkg/reconcile
 func (r *ObjStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	l := log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	instance := &cninfv1alpha1.ObjStore{}
+	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
+		//if not found we will just skip
+		l.Error(err, "unable to get resource") // not for production code
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	if instance.Status.State == "" {
+		instance.Status.State = cninfv1alpha1.PENDING_STATE
+		err := r.Status().Update(ctx, instance) //updting the status, not the object
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 
 	return ctrl.Result{}, nil
 }
