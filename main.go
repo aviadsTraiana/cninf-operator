@@ -17,7 +17,12 @@ limitations under the License.
 package main
 
 import (
+	"errors"
 	"flag"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -78,9 +83,26 @@ func main() {
 		os.Exit(1)
 	}
 
+	id, ok := os.LookupEnv("AWS_ACCESS_KEY_ID")
+	if !ok {
+		setupLog.Error(errors.New("load aws access key failed"), "unable to load environment")
+		os.Exit(2)
+	}
+	secret, ok := os.LookupEnv("AWS_SECRET_ACCESS_KEY")
+	if !ok {
+		setupLog.Error(errors.New("load aws access key failed"), "unable to load environment")
+		os.Exit(2)
+	}
+
+	awsSession := session.Must(session.NewSession(&aws.Config{
+		Region:      aws.String("us-east-1"),
+		Credentials: credentials.NewStaticCredentials(id, secret, ""),
+	}))
+
 	if err = (&controllers.ObjStoreReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		S3svc:  s3.New(awsSession),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ObjStore")
 		os.Exit(1)
