@@ -1,6 +1,7 @@
 apiVersion: cninf.aviad.okro.com/v1alpha1
 kind: ObjStore
 metadata:
-  name: objstore-sample
+  name: aviad-objstore-01
 spec:
-  # TODO(user): Add fields here
+  name: aviad-objstore-live-01 #will be bucket name, as such must be globally unique
+  locked: false
