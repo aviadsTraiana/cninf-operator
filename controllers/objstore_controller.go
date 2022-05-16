@@ -26,12 +26,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	cninfv1alpha1 "github.com/aviadsTraiana/cninf-operator/api/v1alpha1"
 )
 
-const configMapName = "%s-cm"
+const (
+	configMapName = "%s-cm"
+	finalizer     = "objstore.cninf.aviad.okro.com"
+)
 
 // ObjStoreReconciler reconciles a ObjStore object
 type ObjStoreReconciler struct {
@@ -59,14 +63,27 @@ func (r *ObjStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	instance := &cninfv1alpha1.ObjStore{}
 	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
-		//if not found we will just skip
-		l.Error(err, "unable to get resource") // not for production code
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	if instance.Status.State == "" {
-		instance.Status.State = cninfv1alpha1.PENDING_STATE
-		err := r.Status().Update(ctx, instance) //updting the status, not the object
+	if instance.DeletionTimestamp.IsZero() { //before any delete command
+		if instance.Status.State == "" {
+			instance.Status.State = cninfv1alpha1.PENDING_STATE
+			err := r.Status().Update(ctx, instance) //updting the status, not the object
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		//add finalizer
+		controllerutil.AddFinalizer(instance, finalizer)
+		err := r.Update(ctx, instance)
 		if err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		l.Info("in deletion flow")
+		//remove finalizer to avoid hanging
+		controllerutil.RemoveFinalizer(instance, finalizer)
+		if err := r.Update(ctx, instance); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
