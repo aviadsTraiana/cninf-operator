@@ -61,29 +61,47 @@ type ObjStoreReconciler struct {
 func (r *ObjStoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l := log.FromContext(ctx)
 
-	instance := &cninfv1alpha1.ObjStore{}
-	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
+	objStore := &cninfv1alpha1.ObjStore{}
+	if err := r.Get(ctx, req.NamespacedName, objStore); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	if instance.DeletionTimestamp.IsZero() { //before any delete command
-		if instance.Status.State == "" {
-			instance.Status.State = cninfv1alpha1.PENDING_STATE
-			err := r.Status().Update(ctx, instance) //updting the status, not the object
+	if objStore.DeletionTimestamp.IsZero() { //before any delete command
+		if objStore.Status.State == "" {
+			objStore.Status.State = cninfv1alpha1.PENDING_STATE
+			err := r.Status().Update(ctx, objStore) //updting the status, not the object
 			if err != nil {
 				return ctrl.Result{}, err
 			}
 		}
 		//add finalizer
-		controllerutil.AddFinalizer(instance, finalizer)
-		err := r.Update(ctx, instance)
-		if err != nil {
+		controllerutil.AddFinalizer(objStore, finalizer)
+		if err := r.Update(ctx, objStore); err != nil {
 			return ctrl.Result{}, err
+		}
+		if objStore.Status.State == cninfv1alpha1.PENDING_STATE {
+			l.Info("starting to create bucket")
+			if err := r.createResources(ctx, objStore); err != nil {
+				objStore.Status.State = cninfv1alpha1.ERROR_STATE // we detected an error, no need to repeat logic
+				l.Error(err, "error while creating bucket")
+				err2 := r.Status().Update(ctx, objStore)
+				l.Error(err2, "failed to update status")
+				return ctrl.Result{}, err
+			}
 		}
 	} else {
 		l.Info("in deletion flow")
+		if err := r.deleteResources(ctx, objStore); err != nil {
+			l.Error(err, "failed to delete bucket")
+			objStore.Status.State = cninfv1alpha1.ERROR_STATE
+			err2 := r.Status().Update(ctx, objStore)
+			if err2 != nil {
+				l.Error(err2, "failed to update status")
+			}
+			return ctrl.Result{}, err
+		}
 		//remove finalizer to avoid hanging
-		controllerutil.RemoveFinalizer(instance, finalizer)
-		if err := r.Update(ctx, instance); err != nil {
+		controllerutil.RemoveFinalizer(objStore, finalizer)
+		if err := r.Update(ctx, objStore); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
